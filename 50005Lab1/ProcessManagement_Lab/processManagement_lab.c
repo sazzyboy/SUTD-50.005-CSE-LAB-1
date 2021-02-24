@@ -55,7 +55,7 @@ void job_dispatch(int i){
                 exit(3);
             }
             else if (shmPTR_jobs_buffer[i].task_type == 'i') {
-                shmPTR_jobs_buffer[i].task_status = 0; // job cleared
+                shmPTR_jobs_buffer[i].task_status = 0; // no job or job cleared
                 kill(getpid(), SIGKILL);
             }
         }
@@ -98,12 +98,12 @@ void setup(){
 // part c: creating a semaphore with value 1 to protect the global_data structure, i would first open a semaphore
     // from the document, it says that sem_open must be used and gives the various input arguments.
     //sem_t *sem_open(const char *name, int oflag, ...);      
-    sem_global_data = sem_open("semglobaldata", O_CREAT|O_EXCL,0644,1);
+    sem_global_data = sem_open("semglobaldata", O_CREAT | O_EXCL, 0644, 1);
     // i then check if there is an existing semaphore with the same name;
     while(true){
-    if (sem_global_data==SEM_FAILED){
-        sem_unlink("semglobaldata");
-        sem_global_data = sem_open("semglobaldata", O_CREAT|O_EXCL,0644,1);
+        if (sem_global_data == SEM_FAILED){
+            sem_unlink("semglobaldata");
+            sem_global_data = sem_open("semglobaldata", O_CREAT | O_EXCL, 0644, 1);
     }
     else {
         break;
@@ -130,12 +130,12 @@ void setup(){
         char *semjobs = malloc(sizeof(char)*64);
         sprintf(semjobs,"semjobs%d",i);
 
-        sem_jobs_buffer[i]=sem_open(semjobs,O_CREAT|O_EXCL,0644,0);
+        sem_jobs_buffer[i]=sem_open(semjobs,O_CREAT | O_EXCL,0644,0);
         // same as above in part c to check if there was a semaphore with the same name and the steps needed to be taken to unlink and reinitialise 
         while(true){
             if (sem_jobs_buffer[i]==SEM_FAILED){
                 sem_unlink(semjobs);
-                sem_jobs_buffer[i]=sem_open(semjobs,O_CREAT|O_EXCL,0644,0);
+                sem_jobs_buffer[i]=sem_open(semjobs,O_CREAT | O_EXCL,0644,0);
             }
             else{
                 break;
@@ -181,14 +181,14 @@ void main_loop(char* fileName){
     FILE* opened_file = fopen(fileName, "r");
     char action; //stores whether its a 'p' or 'w'
     long num; //stores the argument of the job 
-    int gettask; //this is an integer that we will alternate between 1 and 0, whereby if its 1, then we would need to get the task and 0 otherwise! 
+    int get_task; //this is an integer that we will alternate between 1 and 0, whereby if its 1, then we would need to get the task and 0 otherwise! 
 
     while (fscanf(opened_file, "%c %ld\n", &action, &num) == 2) { //while the file still has input
 
         //TODO#4: create job, busy wait
-       gettask = 1; // since gettask is set to 1, we definitely need to get the task. as such, we move into the while loop.
+       get_task = 1; // since gettask is set to 1, we definitely need to get the task. as such, we move into the while loop.
 
-        while (gettask == 1) {
+        while (get_task == 1) {
             // create job, busy wait
             // part a. Busy wait and examine each shmPTR_jobs_buffer[i] for jobs that are completed and empty by checking that shmPTR_jobs_buffer[i].task_status == 0(this is given!).
             // also need to ensure that the process i IS alive using waitpid(children_processes[i], NULL, WNOHANG). This WNOHANG option will not cause main process to block when the child is still alive. waitpid will return 0 if the child is still alive, 1 otherwise!
@@ -201,7 +201,7 @@ void main_loop(char* fileName){
                     shmPTR_jobs_buffer[i].task_duration = num;
                     shmPTR_jobs_buffer[i].task_type = action;
                     shmPTR_jobs_buffer[i].task_status = 1;
-                    gettask = 0; // no need to get task anymore.
+                    get_task = 0; // no need to get task anymore.
                     // part d. Then, update the shmPTR_jobs_buffer[i] for this process. Afterwards, don't forget to do sem_post as well 
                     sem_post(sem_jobs_buffer[i]);
                     // c. Break of busy wait loop, advance to the next task on file 
@@ -275,7 +275,7 @@ void cleanup(){
     int sem_close_status = sem_unlink("semglobaldata");
     //no need print if closed properly, if not will get marks deducted! 
     if (sem_close_status != 0){
-    printf("Semaphore globaldata fails to close.\n");}
+        printf("Semaphore globaldata fails to close.\n");}
 
     for (int i = 0; i<number_of_processes; i++){
         char *sem_name = malloc(sizeof(char)*16);
@@ -292,7 +292,7 @@ void cleanup(){
 // Real main
 int main(int argc, char* argv[]){
 
-    printf("Lab 1 Starts...\n");
+    //printf("Lab 1 Starts...\n");
 
     struct timeval start, end;
     long secs_used,micros_used;
